@@ -1,0 +1,122 @@
+import argparse
+import json
+import os
+import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+
+def extract_episode_index_id(image_path: Optional[str]) -> Optional[str]:
+    if not image_path:
+        return None
+
+    name = os.path.basename(str(image_path))
+    match = re.search(r"episode_(\d+)_(\d+)", name)
+
+    if match:
+        episode_number = int(match.group(1))
+        frame_number = int(match.group(2))
+        return episode_number, frame_number
+    return -1, 0
+
+def get_first_image_path(sample: Dict[str, Any]) -> Optional[str]:
+    images = sample.get("images") or []
+    if isinstance(images, str):
+        return images
+    if isinstance(images, list) and images:
+        return images[0]
+    return None
+
+
+def build_output_path(input_path: str) -> str:
+    input_path = Path(input_path)
+    return str(input_path.with_name(f"{input_path.stem}_with_anchor{input_path.suffix}"))
+
+
+def load_semantic_anchors(metadata_path: str) -> List[Dict[str, Any]]:
+    with open(metadata_path, "r", encoding="utf-8") as f:
+        metadata = json.load(f)
+
+    semantic_anchors = [a.get("filename") for a in metadata.get("semantic_anchors", [])]
+    kinetic_anchors = [a.get("filename") for a in metadata.get("kinematic_anchors", [])]
+    all_anchors = semantic_anchors + kinetic_anchors
+    sorted_data = sorted(all_anchors, key=lambda x: (int(x.split('_')[-3]), int(x.split('_')[-2])))
+    return sorted_data
+
+
+def add_semantic_anchor_to_dataset(
+    dataset: List[Dict[str, Any]],
+    semantic_anchors: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    episode_to_latest_anchor = {}
+    anchor_ptr = 0
+    total = len(dataset)
+
+    process_episode = 0
+    cached_episodes = []
+    for idx, sample in enumerate(dataset):
+        current_episode_id, current_frame_id = extract_episode_index_id(get_first_image_path(sample))
+        if current_episode_id != process_episode:
+            process_episode = current_episode_id
+            cached_episodes = []
+        while anchor_ptr < len(semantic_anchors):
+            anchor = semantic_anchors[anchor_ptr]
+            episode_id, index = extract_episode_index_id(anchor)
+            if episode_id < current_episode_id:
+                anchor_ptr += 1
+                continue
+            if index >= int(current_frame_id) or episode_id > current_episode_id:
+                break
+            else:
+                cached_episodes.append(anchor)
+                anchor_ptr += 1
+        updated_images = cached_episodes + sample.get("images", [])
+
+        sample["messages"][0]["content"] = "given current image <image>" + \
+                sample["messages"][0]["content"].replace("<image>", "")
+        if len(cached_episodes) > 0:
+            sample["messages"][0]["content"] = "given previous anchors " + \
+                "<image>" * len(cached_episodes) + ", and " + \
+                sample["messages"][0]["content"].replace("given ", "")
+        sample["images"] = updated_images
+
+        if idx % 100000 == 0:
+            print(f"processed {idx}/{total}")
+
+    return dataset
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Add previous semantic anchors into each sample")
+    parser.add_argument("input_json", help="Path to the source dataset json file")
+    parser.add_argument(
+        "--metadata",
+        default="/root/datasets/sematic_anchors.json",
+        help="Path to semantic_anchors.json",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Output json path. Defaults to <input>_with_anchor.json",
+    )
+    args = parser.parse_args()
+
+    input_path = args.input_json
+    output_path = args.output or build_output_path(input_path)
+
+    with open(input_path, "r", encoding="utf-8") as f:
+        dataset = json.load(f)
+
+    semantic_anchors = load_semantic_anchors(args.metadata)
+    print(f"Loaded {len(dataset)} samples and {len(semantic_anchors)} semantic anchors")
+
+    dataset_with_anchor = add_semantic_anchor_to_dataset(dataset, semantic_anchors)
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(dataset_with_anchor, f, ensure_ascii=False, indent=2)
+
+    print(f"Wrote output to {output_path}")
+
+
+if __name__ == "__main__":
+    main()
