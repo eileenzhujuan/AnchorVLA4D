@@ -1375,11 +1375,7 @@ def load_checkpoint(ddp_model, optimizer, opt_param_scheduler, load_arg='load', 
     strict = False if args.retro_add_retriever else strict
     if not skip_load_to_model_and_opt:
         if len(ddp_model) == 1:
-            if True:
-            #     state_dict['model']['action_head'].pop('pos_embed')
-            #     state_dict['model']['action_head'].pop('combine.0.weight')
-                ddp_model[0].load_state_dict(state_dict['model'], strict=False)
-            elif not args.finetune:
+            if args.finetune:
                 print(f'mark resume training')
                 ddp_model[0].load_state_dict(state_dict['model'], strict=strict)
             else:
@@ -1388,7 +1384,8 @@ def load_checkpoint(ddp_model, optimizer, opt_param_scheduler, load_arg='load', 
                     action_state = torch.load(args.mm.model.action_head_load, map_location='cpu')['nets']['nets']
                     dp_action_state = {k.replace('policy.noise_pred_net.', ''): v for k, v in action_state.items()}
                     dp_action_state.pop('pos_embed')
-                    ddp_model[0].module.module.action_head.load_state_dict(dp_action_state, strict=False)
+                    loading_status = ddp_model[0].module.module.action_head.load_state_dict(dp_action_state, strict=False)
+                    print(f'loading action_head, {loading_status}')
                 ddp_model[0].load_state_dict(state_dict, strict=False)
         else:
             for i in range(len(ddp_model)):

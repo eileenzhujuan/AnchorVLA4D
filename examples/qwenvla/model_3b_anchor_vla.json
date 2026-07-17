@@ -7,7 +7,7 @@
     "stop_token": 151643,
     "action_tokenizer": "ActionTokenizer",
     "action_bin_file": null,
-    "action_head_load": null,
+    "action_head_load": "/root/models/open_scale_dp_l_backbone.ckpt",
     "image_encoder": {
         "vision_encoder": {
             "model_id": "qwen2vit",

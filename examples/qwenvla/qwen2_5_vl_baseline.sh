@@ -17,13 +17,13 @@ MASTER_PORT=${MASTER_PORT:-6002}
 NNODES=${NNODES:-1}
 NODE_RANK=${NODE_RANK:-0}
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
-EXPERIMENT=${EXPERIMENT:-"anchorvla_t10"}
+EXPERIMENT=${EXPERIMENT:-"baseline_t10"}
 ExpPath=${ExpPath:-"../experiments"}
 TENSORBOARD_LOGS_PATH="${ExpPath}/${EXPERIMENT}/tensorboard_dir/"
 
 
 MM_DATA=${MM_DATA:-"./examples/qwenvla/data_3b.json"}
-MM_MODEL=${MM_MODEL:-"./examples/qwenvla/model_3b_anchor_vla.json"}
+MM_MODEL=${MM_MODEL:-"./examples/qwenvla/model_3b.json"}
 VOCAB_SIZE=${VOCAB_SIZE:-151936}
 MM_TOOL="./mindspeed_mm/tools/tools.json"
 LOAD_PATH=${LOAD_PATH:-"../../models/ckpt/mm/Qwen2.5-VL-3B-Instruct_pp1_tp1"}
@@ -32,11 +32,11 @@ SAVE_PATH="${ExpPath}/${EXPERIMENT}/ckpt"
 TP=${TP:-1}
 PP=${PP:-1}
 CP=${CP:-1}
-MBS=${MBS:-20}
+MBS=${MBS:-8}
 GRAD_ACC_STEP=${GRAD_ACC_STEP:-8}
 DP=$(($WORLD_SIZE/$TP/$PP/$CP))
 GBS=$(($MBS*$GRAD_ACC_STEP*$DP))
-TRAIN_ITERS=${TRAIN_ITERS:-30000}
+TRAIN_ITERS=${TRAIN_ITERS:-60000}
 NUM_WORKERS=${NUM_WORKERS:-4}
 SEED=${SEED:-42}
 

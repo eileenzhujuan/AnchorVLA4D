@@ -13,7 +13,7 @@ export ACLNN_CACHE_LIMIT=100000
 export PYTHONPATH=$PWD:$PYTHONPATH
 NPUS_PER_NODE=${NPUS_PER_NODE:-8}
 MASTER_ADDR=${MASTER_ADDR:-localhost}
-MASTER_PORT=${MASTER_PORT:-6002}
+MASTER_PORT=${MASTER_PORT:-6003}
 NNODES=${NNODES:-1}
 NODE_RANK=${NODE_RANK:-0}
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
@@ -22,7 +22,7 @@ ExpPath=${ExpPath:-"../experiments"}
 TENSORBOARD_LOGS_PATH="${ExpPath}/${EXPERIMENT}/tensorboard_dir/"
 
 
-MM_DATA=${MM_DATA:-"./examples/qwenvla/data_3b.json"}
+MM_DATA=${MM_DATA:-"./examples/qwenvla/data_3b_updated_anchor.json"}
 MM_MODEL=${MM_MODEL:-"./examples/qwenvla/model_3b_anchor_vla.json"}
 VOCAB_SIZE=${VOCAB_SIZE:-151936}
 MM_TOOL="./mindspeed_mm/tools/tools.json"
@@ -32,7 +32,7 @@ SAVE_PATH="${ExpPath}/${EXPERIMENT}/ckpt"
 TP=${TP:-1}
 PP=${PP:-1}
 CP=${CP:-1}
-MBS=${MBS:-20}
+MBS=${MBS:-16}
 GRAD_ACC_STEP=${GRAD_ACC_STEP:-8}
 DP=$(($WORLD_SIZE/$TP/$PP/$CP))
 GBS=$(($MBS*$GRAD_ACC_STEP*$DP))
