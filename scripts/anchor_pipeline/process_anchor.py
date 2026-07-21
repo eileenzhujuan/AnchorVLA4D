@@ -1,3 +1,15 @@
+"""Anchor keyframe extraction script.
+
+Purpose:
+- Read the dataset JSON index and organize samples in trajectory order.
+- Extract kinematic keyframes based on state changes and gripper changes.
+- Extract semantic keyframes based on DINOv2 visual features.
+- Write the results to a JSON file for downstream training or data processing.
+
+Usage:
+    python process_anchor.py <json_file> <output_file_name>
+"""
+
 import os
 import sys
 import re
@@ -13,8 +25,14 @@ GRIPPER_THRESHOLD = 0.1                # 夹爪状态变化的阈值
 VELOCITY_THRESHOLD = 0.2             # 速度接近0的阈值
 DINO_SIM_THRESHOLD = 0.2             # 视觉相似度跌破该值时记为新Anchor
 BATCH_SIZE = 32                       # 视觉提取时的Batch大小
-DEVICE = "npu"# if torch.cuda.is_available() else "cpu"
 DATA_DIR = "/root/datasets"
+
+if hasattr(torch, "npu") and torch.npu.is_available():
+    DEVICE = "npu"
+elif torch.cuda.is_available():
+    DEVICE = "cuda"
+else:
+    DEVICE = "cpu"
 # ===============================================
 
 
@@ -181,13 +199,88 @@ def extract_semantic_keyframes(dataset, processor, model, data_dir=None, ):
             anchor_feat = curr_feat
     return semantic_keyframes
 
+def resolve_output_path(json_file, output_file_name):
+    if os.path.isabs(output_file_name):
+        return output_file_name
+
+    data_root = os.path.dirname(os.path.dirname(os.path.abspath(json_file)))
+    if not os.path.exists(data_root):
+        data_root = DATA_DIR
+    return os.path.join(data_root, output_file_name)
+
+
+def _extract_episode_frame(image_path):
+    """Extract episode and frame numbers from an image path."""
+    if not image_path:
+        return None, None
+
+    match = re.search(r"episode_(\d+)_(\d+)", str(image_path))
+    if match:
+        return int(match.group(1)), int(match.group(2))
+
+    match = re.search(r"episode_(\d+)", str(image_path))
+    if match:
+        return int(match.group(1)), None
+
+    return None, None
+
+
+def check_in_order(dataset, max_samples=10):
+    """Check whether the first few samples are already in order and print a warning if not."""
+    if not dataset:
+        print("WARNING: input dataset is empty; order check skipped.")
+        return False
+
+    sample_count = min(max_samples, len(dataset))
+    in_order = True
+    checked_items = []
+
+    for i in range(1, sample_count):
+        prev_entry = dataset[i - 1]
+        curr_entry = dataset[i]
+
+        prev_images = prev_entry.get("images") or []
+        curr_images = curr_entry.get("images") or []
+        prev_path = prev_images[-1] if isinstance(prev_images, list) and prev_images else str(prev_images)
+        curr_path = curr_images[-1] if isinstance(curr_images, list) and curr_images else str(curr_images)
+
+        prev_episode, prev_frame = _extract_episode_frame(prev_path)
+        curr_episode, curr_frame = _extract_episode_frame(curr_path)
+
+        if prev_episode is not None and curr_episode is not None:
+            if prev_episode > curr_episode:
+                in_order = False
+                break
+            if prev_episode == curr_episode and prev_frame is not None and curr_frame is not None and prev_frame > curr_frame:
+                in_order = False
+                break
+
+        checked_items.append((prev_path, curr_path, prev_episode, prev_frame, curr_episode, curr_frame))
+
+    print("Order check for first {} samples:".format(sample_count))
+    for idx, (prev_path, curr_path, prev_episode, prev_frame, curr_episode, curr_frame) in enumerate(checked_items, start=1):
+        prev_label = f"ep{prev_episode}" if prev_episode is not None else str(prev_path)
+        curr_label = f"ep{curr_episode}" if curr_episode is not None else str(curr_path)
+        if prev_frame is not None:
+            prev_label += f"/frame{prev_frame}"
+        if curr_frame is not None:
+            curr_label += f"/frame{curr_frame}"
+        print(f"  [{idx}] {prev_label} -> {curr_label}")
+
+    if in_order:
+        print("INFO: The first {} samples appear to be in order.".format(sample_count))
+    else:
+        print("WARNING: The first {} samples are not in order. Please ensure the input JSON is already sorted in the required order before running this pipeline.".format(sample_count))
+
+    print("WARNING: This pipeline assumes the input JSON is already in the required order; otherwise anchor extraction results may be incorrect.")
+    return in_order
+
+
 def main(json_file, output_file_name):
     print("步骤 1: 正在从磁盘加载 JSON 索引...")
     dataset = load_dataset_json_list(json_file)
-    with open('/root/datasets/jsons/bridge_in_order.json', 'w') as f:
-        json.dump(dataset, f, indent=4, ensure_ascii=False)
-    exit(0)
-    print(f'{[data["images"] for data in dataset]}')
+    check_in_order(dataset)
+
     print(f"成功加载 {len(dataset)} 帧数据。")
 
     data_root = os.path.dirname(os.path.dirname(os.path.abspath(json_file)))
@@ -223,8 +316,9 @@ def main(json_file, output_file_name):
         current_idx = end_idx
     
     
-    out_path = os.path.join(data_root, output_file_name)
-    with open(out_path, 'w') as f:
+    out_path = resolve_output_path(json_file, output_file_name)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(output_metadata, f, indent=4, ensure_ascii=False)
         
     print(f"\n🎉 运行成功！Anchor 标记文件已保存至: {out_path}")
