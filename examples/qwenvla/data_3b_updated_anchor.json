@@ -19,8 +19,8 @@
         "basic_parameters": {
             "template": "qwen2vl_action",
             "dataset_dir": "/root/datasets/",
-            "dataset": "/root/datasets/jsons/bridge_chunk5_swa_scale1_filter.json",
-            "cache_dir": "../data/cache_dir",
+            "dataset": "/root/datasets/jsons/bridge_with_new_anchor_filtered.json",
+            "cache_dir": "../data/cache_dir_new_anchor",
             "train_on_prompt": false,
             "mask_history": false,
             "preprocessing_batch_size": 256,
