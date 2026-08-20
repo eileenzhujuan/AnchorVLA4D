@@ -7,7 +7,7 @@
     "stop_token": 151643,
     "action_tokenizer": "ActionTokenizer",
     "action_bin_file": null,
-    "action_head_load": "/root/models/open_scale_dp_l_backbone.ckpt",
+    "action_head_load": "/home/ma-user/work/models/open_scale_dp_l_backbone.ckpt",
     "image_encoder": {
         "vision_encoder": {
             "model_id": "qwen2vit",
@@ -104,7 +104,7 @@
             "input_embed_dim": 1176,
             "output_dim": 2048,
             "freeze": true,
-            "load_path": "/root/models/info_sharing.pth"
+            "load_path": "/home/ma-user/work/models/info_sharing.pth"
         },
         "model_size": "ScaleDP_L",
         "action_dim": 7,
