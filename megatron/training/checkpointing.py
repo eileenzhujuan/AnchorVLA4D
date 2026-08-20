@@ -1376,8 +1376,12 @@ def load_checkpoint(ddp_model, optimizer, opt_param_scheduler, load_arg='load', 
     if not skip_load_to_model_and_opt:
         if len(ddp_model) == 1:
             if args.finetune:
-                print(f'mark resume training')
                 ddp_model[0].load_state_dict(state_dict['model'], strict=strict)
+            elif args.resume:
+                args.mm.model.action_head_load = None
+                args.mm.model.action_head.info_sharing.load_path = None
+                ddp_model[0].info_sharing_load_path = None
+                ddp_model[0].load_state_dict(state_dict['model'], strict=True)
             else:
                 state_dict = {'vlm_model.' + k: v for k, v in state_dict['model'].items()}
                 if args.mm.model.action_head_load is not None:

@@ -40,7 +40,9 @@ class AnchorVLA(nn.Module):
                 if "freeze" in info_config.keys():
                     info_config.pop('freeze')
                 if "load_path" in info_config.keys():
-                    self.info_sharing_load_path = info_config.pop('load_path')
+                    _info_sharing_load_path = info_config.pop('load_path')
+                    if not get_args().resume:
+                        self.info_sharing_load_path = _info_sharing_load_path
                 self.info_sharing = InfoSharing(**info_config)
             if 'cond_vit_embeds' in action_head_config.keys():
                 self.cond_vit_embeds = action_head_config.pop('cond_vit_embeds')
@@ -164,5 +166,8 @@ class AnchorVLA(nn.Module):
             if "info_sharing" in state_dict.keys() and self.info_sharing is not None:
                 print('===> loading info_sharing')
                 self.info_sharing.load_state_dict(state_dict["info_sharing"], strict=strict)
+            if "action_head" in state_dict.keys() and self.action_head is not None:
+                print('===> loading action_head')
+                self.action_head.load_state_dict(state_dict["action_head"], strict=strict)
             return ret
         return super().load_state_dict(state_dict, strict)
