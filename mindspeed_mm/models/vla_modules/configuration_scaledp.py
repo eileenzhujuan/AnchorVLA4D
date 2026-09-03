@@ -1,6 +1,7 @@
 import os
-from typing import Union, List
+from typing import Union, List, Optional
 from transformers import PretrainedConfig
+
 
 from transformers.utils import logging
 from transformers import AutoConfig, AutoModelForCausalLM
@@ -31,7 +32,8 @@ class ScaleDPPolicyConfig(PretrainedConfig):
             depth: int = 28,  # number of DiT blocks
             n_emb: int = 256,  # embedding size
             num_heads: int = 16, 
-            mlp_ratio: int = 4.0,
+            mlp_ratio: float = 4.0,
+
             time_as_cond: bool = True,
             obs_as_cond: bool = True,
             learn_sigma: bool = False,
@@ -40,9 +42,17 @@ class ScaleDPPolicyConfig(PretrainedConfig):
             noise_samples: int = 1,
             num_train_timesteps: int = 100,
             is_tinyvla: bool = False,
+            dim_weights: Optional[List[float]] = None,
             **kwargs
+
     ):
+        self.dim_weights = dim_weights
+        if dim_weights is not None:
+            assert len(dim_weights) == action_dim, \
+                f"dim_weights length {len(dim_weights)} must match action_dim {action_dim}"
+
         if model_size != "none":
+
             depth = MODEL_STRUCTURE[model_size]['depth']
             n_emb = MODEL_STRUCTURE[model_size]['n_emb']
             num_heads = MODEL_STRUCTURE[model_size]['num_heads']

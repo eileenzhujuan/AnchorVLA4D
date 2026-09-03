@@ -96,6 +96,7 @@ fi
 
 if [ "$RESUME" == "true" ]; then
     GPT_ARGS="${GPT_ARGS} --resume "
+    LOAD_PATH=$SAVE_PATH
 fi
 
 echo "GPT_ARGS" $GPT_ARGS

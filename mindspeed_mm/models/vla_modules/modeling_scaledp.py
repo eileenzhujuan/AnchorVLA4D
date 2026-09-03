@@ -268,6 +268,10 @@ class ScaleDP(PreTrainedModel):
         self.num_queries = config.num_queries #16
         self.noise_samples = config.noise_samples # 1
         # self.num_inference_timesteps = config.num_inference_timesteps # 100
+        # per-dimension loss weights, e.g. [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 1.0]
+        # to up-weight the rotation dims (index 3-5). None means equal weighting.
+        self.dim_weights = getattr(config, 'dim_weights', None)
+
 
     def initialize_weights(self):
         # Initialize transformer layers:
@@ -413,6 +417,11 @@ class ScaleDP(PreTrainedModel):
             noise_pred = self.model_forward(noisy_actions, timesteps, global_cond=hidden_states, states=states, spatial_features=spatial_features)
             noise = noise.view(noise.size(0) * noise.size(1), *noise.size()[2:])
             loss = torch.nn.functional.mse_loss(noise_pred, noise, reduction='none')
+            # apply per-dimension weights (e.g. up-weight rotation dims 3-5)
+            dim_weights = None
+            if self.dim_weights is not None:
+                dim_weights = torch.tensor(self.dim_weights, device=loss.device, dtype=loss.dtype).view(1, 1, -1)
+                loss = loss * dim_weights
             loss = (loss * ~is_pad.unsqueeze(-1)).mean()
             with torch.no_grad():
                 # scheduler parameters
@@ -428,8 +437,13 @@ class ScaleDP(PreTrainedModel):
                     action_pred, actions.repeat(num_noise_samples, 1, 1),
                     reduction="none"
                 )
+                # apply per-dimension weights to action_loss as well
+                if dim_weights is not None:
+                    action_loss = action_loss * dim_weights
                 action_loss = (action_loss * ~is_pad.unsqueeze(-1)).mean()
             return {'loss': loss, 'action_loss': action_loss}
+
+
             # return loss
         else:  # inference time
             B = 1

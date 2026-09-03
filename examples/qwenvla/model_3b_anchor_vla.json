@@ -119,6 +119,8 @@
         "tim_as_cond": true,
         "obs_as_cond": false,
         "num_inference_timesteps": 10,
-        "num_train_timesteps": 10
+        "num_train_timesteps": 10,
+        "dim_weights": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     }
 }
+
