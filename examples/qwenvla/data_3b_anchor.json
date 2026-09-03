@@ -2,7 +2,7 @@
     "dataset_param": {
         "dataset_type": "huggingface",
         "preprocess_parameters": {
-            "model_name_or_path": "/root/develop/models/hf/Qwen/Qwen2.5-VL-3B-Instruct",
+            "model_name_or_path": "/home/ma-user/work/models/Qwen2.5-VL-3B-Instruct",
             "use_fast_tokenizer": true,
             "split_special_tokens": false,
             "image_max_pixels": 262144,
@@ -18,13 +18,13 @@
         },
         "basic_parameters": {
             "template": "qwen2vl_action",
-            "dataset_dir": "/root/datasets/",
-            "dataset": "/root/datasets/jsons/bridge_with_anchor_chunk5_swa_scale1_filter.json",
-            "cache_dir": "../data/cache_dir_anchor",
+            "dataset_dir": "/home/ma-user/work/datasets/anchor/",
+            "dataset": "/home/ma-user/work/datasets/anchor/jsons/bridge_step_10.json",
+            "cache_dir": "../data/cache_dir_anchor_s10",
             "train_on_prompt": false,
             "mask_history": false,
             "preprocessing_batch_size": 128,
-            "preprocessing_num_workers": 1,
+            "preprocessing_num_workers": 8,
             "streaming": false,
             "max_samples": null,
             "tool_format": null
