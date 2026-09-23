@@ -1,3 +1,9 @@
+<div align="center">
+	
+#### [AnchorVLA4D: an Anchor-Based Spatial-Temporal Vision-Language-Action Model for Robotic Manipulation](https://arxiv.org/abs/2603.12730)
+
+</div>
+
 # AnchorVLA4D — Quick Start
 
 This file explains how to run the example scripts under the `examples/qwenvla` directory and lists a few important notes.
